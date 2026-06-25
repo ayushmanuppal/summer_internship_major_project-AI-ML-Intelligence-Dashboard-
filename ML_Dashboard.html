@@ -1,0 +1,2691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ML Intelligence Dashboard — Factory Sensor 2040</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ══════════════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════════════ */
+:root {
+  --white:       #FFFFFF;
+  --bg:          #F5F7FA;
+  --bg-2:        #EEF1F8;
+  --blue:        #2563EB;
+  --blue-lt:     #DBEAFE;
+  --blue-mid:    #3B82F6;
+  --blue-dark:   #1D4ED8;
+  --ink:         #1F2937;
+  --ink-2:       #374151;
+  --ink-3:       #6B7280;
+  --ink-4:       #9CA3AF;
+  --green:       #10B981;
+  --green-lt:    #D1FAE5;
+  --red:         #EF4444;
+  --red-lt:      #FEE2E2;
+  --amber:       #F59E0B;
+  --amber-lt:    #FEF3C7;
+  --purple:      #8B5CF6;
+  --purple-lt:   #EDE9FE;
+  --border:      #E5E7EB;
+  --border-2:    rgba(37,99,235,.15);
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow:      0 4px 16px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.04);
+  --shadow-lg:   0 10px 40px rgba(0,0,0,.1), 0 4px 12px rgba(0,0,0,.06);
+  --nav-w:       260px;
+  --nav-collapsed: 72px;
+  --top-h:       64px;
+  --radius:      8px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --ease:        cubic-bezier(.25,.8,.25,1);
+  --display:     'Poppins', system-ui, sans-serif;
+  --sans:        'Inter', system-ui, sans-serif;
+  --mono:        'JetBrains Mono', monospace;
+}
+[data-theme="dark"] {
+  --white:       #1E2330;
+  --bg:          #151925;
+  --bg-2:        #1A1F2E;
+  --ink:         #F1F5F9;
+  --ink-2:       #CBD5E1;
+  --ink-3:       #94A3B8;
+  --ink-4:       #64748B;
+  --border:      #2D3748;
+  --border-2:    rgba(96,165,250,.2);
+  --blue-lt:     rgba(37,99,235,.2);
+  --green-lt:    rgba(16,185,129,.2);
+  --red-lt:      rgba(239,68,68,.2);
+  --amber-lt:    rgba(245,158,11,.2);
+  --purple-lt:   rgba(139,92,246,.2);
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.3);
+  --shadow:      0 4px 16px rgba(0,0,0,.3);
+  --shadow-lg:   0 10px 40px rgba(0,0,0,.4);
+}
+
+/* ══════════════════════════════════════════════
+   RESET
+══════════════════════════════════════════════ */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; font-size:16px; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+a { color: var(--blue); text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+ul { list-style: none; }
+img, svg { display: block; max-width: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
+
+/* ══════════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════════ */
+.app-shell { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--nav-w);
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  z-index: 200;
+  transition: width .3s var(--ease), transform .3s var(--ease);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.sidebar.collapsed { width: var(--nav-collapsed); }
+.sidebar-brand {
+  height: var(--top-h);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.brand-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-mid));
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37,99,235,.3);
+}
+.brand-icon svg { width: 20px; height: 20px; stroke: #fff; }
+.brand-text {
+  font-family: var(--display);
+  font-size: .95rem; font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity .2s;
+}
+.sidebar.collapsed .brand-text { opacity: 0; pointer-events: none; }
+.sidebar-toggle {
+  margin-left: auto; flex-shrink: 0;
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-3);
+  transition: background .2s, color .2s;
+}
+.sidebar-toggle:hover { background: var(--bg); color: var(--blue); }
+.sidebar-toggle svg { width: 16px; height: 16px; stroke: currentColor; }
+
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 0; }
+.nav-section-label {
+  font-size: .65rem; font-weight: 600; letter-spacing: .08em;
+  color: var(--ink-4); text-transform: uppercase;
+  padding: 16px 20px 6px;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity .2s;
+}
+.sidebar.collapsed .nav-section-label { opacity: 0; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 20px;
+  color: var(--ink-3);
+  font-size: .875rem; font-weight: 500;
+  border-radius: 8px;
+  margin: 2px 8px;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  white-space: nowrap;
+  position: relative;
+}
+.nav-item:hover { background: var(--bg); color: var(--blue); }
+.nav-item.active {
+  background: var(--blue-lt);
+  color: var(--blue);
+}
+.nav-item .nav-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .2s;
+}
+.nav-item .nav-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.nav-item-label { white-space: nowrap; transition: opacity .2s; }
+.sidebar.collapsed .nav-item-label { opacity: 0; pointer-events: none; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--blue-lt); color: var(--blue);
+  font-size: .65rem; font-weight: 600;
+  padding: 2px 7px; border-radius: 20px;
+  transition: opacity .2s;
+}
+.sidebar.collapsed .nav-badge { opacity: 0; }
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-footer .nav-item { margin: 0; }
+
+/* ── TOP BAR ── */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: var(--nav-w);
+  right: 0;
+  height: var(--top-h);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+  z-index: 100;
+  transition: left .3s var(--ease);
+  box-shadow: var(--shadow-sm);
+}
+.sidebar.collapsed ~ .main-wrapper .topbar { left: var(--nav-collapsed); }
+.topbar-breadcrumb {
+  flex: 1;
+  display: flex; align-items: center; gap: 8px;
+  font-size: .875rem;
+}
+.topbar-breadcrumb .page-title {
+  font-family: var(--display);
+  font-size: 1rem; font-weight: 600;
+  color: var(--ink);
+}
+.topbar-breadcrumb .sep { color: var(--ink-4); font-size: 1.1rem; }
+.topbar-breadcrumb .page-sub { color: var(--ink-3); font-size: .8rem; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-btn {
+  height: 36px; padding: 0 14px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex; align-items: center; gap: 6px;
+  font-size: .8rem; font-weight: 500;
+  color: var(--ink-2);
+  transition: all .2s;
+  white-space: nowrap;
+}
+.topbar-btn:hover { border-color: var(--blue); color: var(--blue); box-shadow: var(--shadow-sm); }
+.topbar-btn svg { width: 15px; height: 15px; stroke: currentColor; }
+.topbar-btn.primary {
+  background: var(--blue); color: #fff; border-color: var(--blue);
+}
+.topbar-btn.primary:hover { background: var(--blue-dark); border-color: var(--blue-dark); box-shadow: 0 4px 12px rgba(37,99,235,.3); }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .75rem; font-weight: 600;
+  cursor: pointer; flex-shrink: 0;
+}
+
+/* ── MAIN CONTENT ── */
+.main-wrapper {
+  margin-left: var(--nav-w);
+  transition: margin-left .3s var(--ease);
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+.sidebar.collapsed ~ .main-wrapper { margin-left: var(--nav-collapsed); }
+.main-content {
+  margin-top: var(--top-h);
+  padding: 28px 28px;
+  flex: 1;
+}
+
+/* ══════════════════════════════════════════════
+   PAGES
+══════════════════════════════════════════════ */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ══════════════════════════════════════════════
+   COMMON COMPONENTS
+══════════════════════════════════════════════ */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-family: var(--display);
+  font-size: 1.1rem; font-weight: 600;
+  color: var(--ink);
+}
+.section-sub { font-size: .8rem; color: var(--ink-3); margin-top: 2px; }
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow .25s var(--ease), transform .25s var(--ease);
+}
+.card:hover { box-shadow: var(--shadow); }
+.card-header {
+  padding: 18px 22px 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-body { padding: 18px 22px 22px; }
+.card-footer {
+  padding: 12px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  font-size: .78rem; color: var(--ink-3);
+}
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+  transition: all .25s var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--card-accent, var(--blue));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.stat-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+.stat-card .stat-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card-icon-bg, var(--blue-lt));
+  margin-bottom: 16px;
+}
+.stat-card .stat-icon svg { width: 22px; height: 22px; stroke: var(--card-accent, var(--blue)); }
+.stat-card .stat-value {
+  font-family: var(--display);
+  font-size: 1.85rem; font-weight: 700;
+  color: var(--ink);
+  line-height: 1.1;
+  letter-spacing: -.02em;
+}
+.stat-card .stat-label {
+  font-size: .78rem; color: var(--ink-3);
+  margin-top: 4px; font-weight: 500;
+}
+.stat-card .stat-change {
+  font-size: .72rem; font-weight: 600;
+  margin-top: 8px;
+  display: flex; align-items: center; gap: 4px;
+}
+.stat-card .stat-change.up { color: var(--green); }
+.stat-card .stat-change.neutral { color: var(--ink-3); }
+
+.badge {
+  display: inline-flex; align-items: center;
+  font-size: .7rem; font-weight: 600;
+  padding: 3px 9px; border-radius: 20px;
+}
+.badge-blue   { background: var(--blue-lt);   color: var(--blue); }
+.badge-green  { background: var(--green-lt);  color: var(--green); }
+.badge-red    { background: var(--red-lt);    color: var(--red); }
+.badge-amber  { background: var(--amber-lt);  color: var(--amber); }
+.badge-purple { background: var(--purple-lt); color: var(--purple); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 38px; padding: 0 18px;
+  border-radius: var(--radius);
+  font-size: .83rem; font-weight: 600;
+  transition: all .2s var(--ease);
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--blue); color: #fff; border: 1px solid transparent;
+}
+.btn-primary:hover { background: var(--blue-dark); box-shadow: 0 4px 12px rgba(37,99,235,.3); }
+.btn-outline {
+  background: var(--white); color: var(--ink-2);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-ghost {
+  background: transparent; color: var(--ink-3);
+  border: 1px solid transparent;
+}
+.btn-ghost:hover { background: var(--bg); color: var(--ink); }
+.btn svg { width: 15px; height: 15px; stroke: currentColor; }
+.btn-icon {
+  width: 36px; height: 36px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  color: var(--ink-3);
+  background: var(--white);
+  transition: all .2s;
+}
+.btn-icon:hover { border-color: var(--blue); color: var(--blue); }
+.btn-icon svg { width: 16px; height: 16px; stroke: currentColor; }
+
+.grid { display: grid; gap: 20px; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* ══════════════════════════════════════════════
+   PAGE 1 — DASHBOARD
+══════════════════════════════════════════════ */
+.dash-hero {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+  border-radius: var(--radius-xl);
+  padding: 36px 40px;
+  color: #fff;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.dash-hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.06);
+}
+.dash-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; right: 100px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.04);
+}
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.2);
+  padding: 4px 12px; border-radius: 20px;
+  font-size: .73rem; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.hero-tag .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #4ADE80;
+  animation: pulse-dot 1.4s infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:.6; transform:scale(.8); }
+}
+.dash-hero h1 {
+  font-family: var(--display);
+  font-size: 2.2rem; font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -.03em;
+  margin-bottom: 10px;
+  position: relative;
+}
+.dash-hero p {
+  font-size: .95rem; opacity: .82;
+  max-width: 540px; line-height: 1.6;
+  position: relative;
+}
+.hero-meta {
+  display: flex; gap: 28px;
+  margin-top: 22px;
+  position: relative;
+}
+.hero-meta-item { display: flex; flex-direction: column; gap: 2px; }
+.hero-meta-item .meta-val {
+  font-family: var(--display);
+  font-size: 1.5rem; font-weight: 700;
+}
+.hero-meta-item .meta-label { font-size: .72rem; opacity: .75; text-transform: uppercase; letter-spacing: .06em; }
+.hero-actions {
+  position: absolute; top: 36px; right: 40px;
+  display: flex; gap: 10px;
+}
+.hero-actions .btn-white {
+  background: rgba(255,255,255,.15); color: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+  backdrop-filter: blur(8px);
+}
+.hero-actions .btn-white:hover { background: rgba(255,255,255,.25); }
+
+.stats-grid { margin-bottom: 28px; }
+.dash-charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+.dash-charts-row3 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+.activity-list { display: flex; flex-direction: column; gap: 0; }
+.activity-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.activity-icon svg { width: 15px; height: 15px; stroke: currentColor; }
+.activity-content { flex: 1; }
+.activity-title { font-size: .83rem; font-weight: 500; color: var(--ink); }
+.activity-time { font-size: .72rem; color: var(--ink-4); margin-top: 2px; }
+
+/* model quick-cards */
+.model-quick-list { display: flex; flex-direction: column; gap: 10px; }
+.model-quick-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  transition: background .2s;
+}
+.model-quick-item:hover { background: var(--blue-lt); }
+.model-quick-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+}
+.model-quick-name { font-size: .83rem; font-weight: 500; flex: 1; }
+.model-quick-acc {
+  font-family: var(--mono);
+  font-size: .78rem; font-weight: 500;
+  color: var(--blue);
+}
+
+/* ══════════════════════════════════════════════
+   PAGE 2 — DATASET EXPLORER
+══════════════════════════════════════════════ */
+.dataset-controls {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.search-box {
+  display: flex; align-items: center;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 12px;
+  gap: 8px;
+  height: 38px;
+  flex: 1; max-width: 320px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.search-box:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-lt); }
+.search-box svg { width: 16px; height: 16px; stroke: var(--ink-3); flex-shrink: 0; }
+.search-box input {
+  background: none; border: none; outline: none;
+  font-family: var(--sans); font-size: .83rem;
+  color: var(--ink); flex: 1;
+}
+.search-box input::placeholder { color: var(--ink-4); }
+.filter-select {
+  height: 38px; padding: 0 12px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--sans); font-size: .83rem; color: var(--ink);
+  outline: none; cursor: pointer;
+  transition: border-color .2s;
+  appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.filter-select:focus { border-color: var(--blue); }
+
+.dataset-stats-row {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 14px;
+  margin-bottom: 20px;
+}
+.mini-stat {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.mini-stat .ms-val {
+  font-family: var(--display); font-size: 1.4rem; font-weight: 700;
+  color: var(--ink); letter-spacing: -.02em;
+}
+.mini-stat .ms-label { font-size: .72rem; color: var(--ink-3); margin-top: 2px; font-weight: 500; }
+
+.table-wrap {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.data-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.data-table thead tr {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.data-table th {
+  padding: 11px 14px;
+  text-align: left; font-weight: 600;
+  color: var(--ink-3); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em;
+  white-space: nowrap; cursor: pointer;
+  user-select: none;
+}
+.data-table th:hover { color: var(--blue); }
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 150px;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg); }
+.data-table .mono { font-family: var(--mono); font-size: .75rem; }
+
+.table-overflow { overflow-x: auto; }
+
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  font-size: .8rem; color: var(--ink-3);
+}
+.page-btns { display: flex; gap: 4px; }
+.page-btn {
+  width: 32px; height: 32px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .78rem; font-weight: 500;
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+  background: var(--white);
+  cursor: pointer; transition: all .2s;
+}
+.page-btn:hover { border-color: var(--blue); color: var(--blue); }
+.page-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.page-btn:disabled { opacity: .4; pointer-events: none; }
+
+/* ══════════════════════════════════════════════
+   PAGE 3 — VISUALIZATIONS
+══════════════════════════════════════════════ */
+.viz-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.viz-tab {
+  height: 34px; padding: 0 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-size: .8rem; font-weight: 500;
+  color: var(--ink-3);
+  display: flex; align-items: center; gap: 6px;
+  cursor: pointer; transition: all .2s;
+}
+.viz-tab:hover { border-color: var(--blue); color: var(--blue); }
+.viz-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.viz-tab svg { width: 14px; height: 14px; stroke: currentColor; }
+.viz-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.viz-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+.viz-card.full { grid-column: 1 / -1; }
+.viz-card-title {
+  font-size: .83rem; font-weight: 600;
+  color: var(--ink); margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.viz-card-title .sub { font-size: .72rem; font-weight: 400; color: var(--ink-3); }
+.chart-container { position: relative; }
+.chart-container canvas { max-height: 280px; }
+
+/* ══════════════════════════════════════════════
+   PAGE 4 — MODEL SELECTION
+══════════════════════════════════════════════ */
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+.model-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all .28s var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+.model-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, var(--model-color-lt, var(--blue-lt)));
+  opacity: 0;
+  transition: opacity .25s;
+}
+.model-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--model-color, var(--blue));
+}
+.model-card:hover::after { opacity: 1; }
+.model-card.selected {
+  border-color: var(--model-color, var(--blue));
+  box-shadow: 0 0 0 3px var(--model-color-lt, var(--blue-lt)), var(--shadow);
+}
+.model-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 14px; position: relative; z-index: 1;
+}
+.model-icon {
+  width: 46px; height: 46px; border-radius: 12px;
+  background: var(--model-color-lt, var(--blue-lt));
+  display: flex; align-items: center; justify-content: center;
+}
+.model-icon svg { width: 22px; height: 22px; stroke: var(--model-color, var(--blue)); }
+.model-badge-type { font-size: .65rem; }
+.model-name {
+  font-family: var(--display);
+  font-size: 1rem; font-weight: 700;
+  color: var(--ink); margin-bottom: 4px;
+  position: relative; z-index: 1;
+}
+.model-desc {
+  font-size: .78rem; color: var(--ink-3);
+  margin-bottom: 16px; line-height: 1.55;
+  position: relative; z-index: 1;
+}
+.model-metrics {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; position: relative; z-index: 1;
+}
+.model-metric-item {
+  background: var(--bg);
+  border-radius: 6px; padding: 8px 10px;
+}
+.model-metric-val {
+  font-family: var(--mono);
+  font-size: .85rem; font-weight: 500; color: var(--ink);
+}
+.model-metric-label { font-size: .65rem; color: var(--ink-4); margin-top: 2px; font-weight: 500; }
+.model-card .select-check {
+  position: absolute; top: 16px; right: 16px; z-index: 2;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--white);
+  transition: all .2s;
+}
+.model-card.selected .select-check {
+  background: var(--model-color, var(--blue));
+  border-color: var(--model-color, var(--blue));
+}
+.model-card .select-check svg { width: 12px; height: 12px; stroke: #fff; opacity: 0; transition: opacity .2s; }
+.model-card.selected .select-check svg { opacity: 1; }
+
+/* ══════════════════════════════════════════════
+   PAGE 5 — LIVE PREDICTION
+══════════════════════════════════════════════ */
+.prediction-layout {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.prediction-layout.wide { grid-template-columns: 2fr 3fr; }
+
+.form-section-title {
+  font-size: .78rem; font-weight: 600;
+  color: var(--ink-3); text-transform: uppercase; letter-spacing: .07em;
+  margin-bottom: 12px; margin-top: 20px;
+}
+.form-section-title:first-child { margin-top: 0; }
+
+.input-group { margin-bottom: 14px; }
+.input-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .78rem; font-weight: 500; color: var(--ink-2);
+  margin-bottom: 5px;
+}
+.input-label .tooltip-icon {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--ink-4); color: #fff;
+  font-size: .55rem; display: flex; align-items: center; justify-content: center;
+  cursor: help; font-weight: 700;
+}
+.input-field {
+  width: 100%; height: 38px;
+  padding: 0 12px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--sans); font-size: .83rem; color: var(--ink);
+  outline: none; transition: all .2s;
+}
+.input-field:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-lt); }
+.input-field::placeholder { color: var(--ink-4); }
+.range-group { display: flex; align-items: center; gap: 10px; }
+.range-input {
+  flex: 1; -webkit-appearance: none;
+  height: 4px; border-radius: 2px;
+  background: var(--border); outline: none;
+  cursor: pointer;
+}
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 2px 6px rgba(37,99,235,.4);
+}
+.range-val {
+  font-family: var(--mono); font-size: .78rem; font-weight: 500;
+  color: var(--blue); width: 54px; text-align: right;
+  background: var(--blue-lt); padding: 2px 7px; border-radius: 4px;
+}
+
+.predict-btn {
+  width: 100%; height: 50px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff; border-radius: var(--radius-lg);
+  font-family: var(--display); font-size: 1rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 20px;
+  transition: all .25s var(--ease);
+  box-shadow: 0 4px 14px rgba(37,99,235,.3);
+  position: relative; overflow: hidden;
+}
+.predict-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(37,99,235,.4);
+}
+.predict-btn:active { transform: translateY(0); }
+.predict-btn svg { width: 20px; height: 20px; stroke: currentColor; }
+.predict-btn .ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,.25);
+  transform: scale(0);
+  animation: ripple-anim .6s linear;
+  pointer-events: none;
+}
+@keyframes ripple-anim {
+  to { transform: scale(4); opacity: 0; }
+}
+
+.result-panel {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); padding: 28px;
+  box-shadow: var(--shadow-sm);
+  min-height: 380px;
+  display: flex; flex-direction: column;
+}
+.result-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  text-align: center; color: var(--ink-4);
+}
+.result-empty .empty-icon {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 4px;
+}
+.result-empty .empty-icon svg { width: 28px; height: 28px; stroke: var(--ink-4); }
+.result-empty p { font-size: .85rem; max-width: 200px; line-height: 1.5; }
+
+.result-content { display: none; flex-direction: column; gap: 18px; }
+.result-content.visible { display: flex; }
+.result-badge-row { display: flex; align-items: center; gap: 10px; }
+.result-main {
+  text-align: center; padding: 24px;
+  background: linear-gradient(135deg, var(--blue-lt), rgba(37,99,235,.03));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-2);
+}
+.result-main .result-label { font-size: .75rem; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+.result-main .result-value {
+  font-family: var(--display); font-size: 2.8rem; font-weight: 800;
+  color: var(--blue); line-height: 1.05;
+  letter-spacing: -.03em;
+  animation: result-pop .4s var(--ease);
+}
+@keyframes result-pop {
+  from { transform: scale(.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.result-main .result-unit { font-size: 1rem; font-weight: 500; color: var(--ink-3); margin-top: 4px; }
+
+.confidence-bar-wrap { }
+.conf-label { display: flex; justify-content: space-between; font-size: .78rem; margin-bottom: 7px; font-weight: 500; }
+.conf-label .conf-val { color: var(--blue); font-weight: 700; font-family: var(--mono); }
+.conf-track {
+  height: 8px; background: var(--border);
+  border-radius: 4px; overflow: hidden;
+}
+.conf-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  transition: width .8s cubic-bezier(.34,1.56,.64,1);
+}
+
+.result-features-mini {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.rfm-item {
+  background: var(--bg); border-radius: 6px; padding: 8px 10px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.rfm-key { font-size: .72rem; color: var(--ink-3); font-weight: 500; }
+.rfm-val { font-family: var(--mono); font-size: .72rem; font-weight: 600; color: var(--ink); }
+
+/* prediction history */
+.pred-history { margin-top: 20px; }
+.pred-history-title {
+  font-size: .75rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--ink-4); margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.pred-history-list { display: flex; flex-direction: column; gap: 6px; }
+.pred-history-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg); border-radius: 7px;
+  font-size: .78rem;
+  animation: slide-in .3s var(--ease);
+}
+@keyframes slide-in {
+  from { opacity:0; transform:translateX(-10px); }
+  to { opacity:1; transform:translateX(0); }
+}
+.pred-hist-model { font-weight: 600; color: var(--blue); flex: 1; }
+.pred-hist-val { font-family: var(--mono); font-weight: 500; color: var(--ink); }
+.pred-hist-time { font-size: .68rem; color: var(--ink-4); margin-left: auto; }
+
+/* ══════════════════════════════════════════════
+   PAGE 6 — MODEL COMPARISON
+══════════════════════════════════════════════ */
+.comparison-controls {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px;
+}
+.comp-table-wrap {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.comp-table { width: 100%; border-collapse: collapse; }
+.comp-table thead th {
+  padding: 12px 16px; text-align: left;
+  background: var(--bg);
+  font-size: .72rem; font-weight: 700; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none;
+  white-space: nowrap;
+  transition: color .2s;
+}
+.comp-table thead th:hover { color: var(--blue); }
+.comp-table thead th .sort-icon { display: inline-block; margin-left: 4px; opacity: .5; }
+.comp-table tbody tr { transition: background .15s; }
+.comp-table tbody tr:hover td { background: var(--bg); }
+.comp-table tbody tr.top1 td:first-child { border-left: 3px solid var(--amber); }
+.comp-table tbody tr.top2 td:first-child { border-left: 3px solid var(--ink-3); }
+.comp-table tbody tr.top3 td:first-child { border-left: 3px solid var(--amber); opacity: .7; }
+.comp-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: .82rem; color: var(--ink-2);
+}
+.comp-table tr:last-child td { border-bottom: none; }
+.comp-table .rank-col { font-size: 1.1rem; width: 48px; }
+.comp-table .model-col { font-weight: 600; color: var(--ink); min-width: 180px; }
+.comp-table .type-col { }
+.metric-bar {
+  display: flex; align-items: center; gap: 8px;
+}
+.metric-bar-track {
+  flex: 1; height: 5px; background: var(--border);
+  border-radius: 3px; overflow: hidden;
+  max-width: 80px;
+}
+.metric-bar-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+}
+.metric-mono { font-family: var(--mono); font-size: .78rem; }
+
+/* ══════════════════════════════════════════════
+   PAGE 7 — PERFORMANCE ANALYTICS
+══════════════════════════════════════════════ */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.perf-selector {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 22px;
+}
+.perf-selector label { font-size: .83rem; font-weight: 500; color: var(--ink-2); }
+.perf-selector select {
+  height: 36px; padding: 0 12px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--sans); font-size: .83rem; color: var(--ink);
+  outline: none;
+}
+
+.confusion-matrix {
+  display: grid;
+  grid-template-columns: auto repeat(2, 1fr);
+  gap: 4px; align-items: center;
+  font-size: .78rem;
+}
+.cm-axis {
+  writing-mode: vertical-rl; text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: .65rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3);
+  text-align: center;
+}
+.cm-header {
+  font-size: .65rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3);
+  text-align: center; padding: 6px;
+}
+.cm-cell {
+  border-radius: 6px; padding: 20px 10px;
+  text-align: center; font-weight: 700;
+  font-family: var(--mono); font-size: 1.2rem;
+}
+.cm-tp { background: var(--green-lt); color: var(--green); }
+.cm-tn { background: var(--blue-lt); color: var(--blue); }
+.cm-fp { background: var(--amber-lt); color: var(--amber); }
+.cm-fn { background: var(--red-lt); color: var(--red); }
+
+.feat-bar-list { display: flex; flex-direction: column; gap: 10px; }
+.feat-bar-item { display: flex; align-items: center; gap: 10px; }
+.feat-bar-label { font-size: .78rem; color: var(--ink-2); font-weight: 500; width: 160px; flex-shrink: 0; }
+.feat-bar-track { flex: 1; height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.feat-bar-fill { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(.34,1.56,.64,1); }
+.feat-bar-val { font-family: var(--mono); font-size: .72rem; color: var(--blue); font-weight: 600; width: 36px; text-align: right; }
+
+/* ══════════════════════════════════════════════
+   PRESENTATION MODE
+══════════════════════════════════════════════ */
+body.presentation-mode .sidebar { display: none; }
+body.presentation-mode .topbar { left: 0; }
+body.presentation-mode .main-wrapper { margin-left: 0; }
+body.presentation-mode .main-content { padding: 32px 40px; }
+body.presentation-mode .stat-card .stat-value { font-size: 2.4rem; }
+body.presentation-mode .card-body { padding: 24px 28px 28px; }
+body.presentation-mode .chart-container canvas { max-height: 360px; }
+body.presentation-mode .predict-btn { height: 60px; font-size: 1.15rem; }
+body.presentation-mode .result-main .result-value { font-size: 3.5rem; }
+
+/* ══════════════════════════════════════════════
+   TOAST / NOTIFICATION
+══════════════════════════════════════════════ */
+.toast-container {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: var(--radius-lg);
+  font-size: .83rem; font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; gap: 10px;
+  animation: toast-in .35s var(--ease), toast-out .35s var(--ease) forwards;
+  animation-delay: 0s, 2.5s;
+  pointer-events: all;
+  max-width: 320px;
+}
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--blue); }
+.toast svg { width: 16px; height: 16px; flex-shrink: 0; }
+@keyframes toast-in {
+  from { opacity:0; transform:translateY(20px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes toast-out {
+  from { opacity:1; transform:translateY(0); }
+  to { opacity:0; transform:translateY(20px); pointer-events:none; }
+}
+
+/* ══════════════════════════════════════════════
+   LOADING SPINNER
+══════════════════════════════════════════════ */
+.spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--blue);
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-xl);
+  z-index: 10;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.loading-overlay.active { opacity: 1; pointer-events: all; }
+
+/* ══════════════════════════════════════════════
+   UPLOAD ZONE
+══════════════════════════════════════════════ */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  text-align: center;
+  background: var(--bg);
+  cursor: pointer;
+  transition: all .2s;
+  margin-bottom: 20px;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--blue); background: var(--blue-lt);
+}
+.upload-zone svg { width: 36px; height: 36px; stroke: var(--ink-4); margin: 0 auto 12px; }
+.upload-zone .uz-title { font-weight: 600; color: var(--ink-2); margin-bottom: 4px; }
+.upload-zone .uz-sub { font-size: .78rem; color: var(--ink-4); }
+.upload-zone input[type="file"] { display: none; }
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .analytics-grid { grid-template-columns: 1fr; }
+  .prediction-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.mobile-open { transform: translateX(0); }
+  .main-wrapper { margin-left: 0 !important; }
+  .topbar { left: 0 !important; }
+  .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .dash-charts-row, .dash-charts-row3 { grid-template-columns: 1fr; }
+  .viz-grid { grid-template-columns: 1fr; }
+  .models-grid { grid-template-columns: 1fr 1fr; }
+  .dash-hero h1 { font-size: 1.6rem; }
+  .hero-actions { position: static; margin-top: 16px; }
+}
+@media (max-width: 600px) {
+  .models-grid { grid-template-columns: 1fr; }
+  .main-content { padding: 16px; }
+  .topbar { padding: 0 14px; }
+  .dataset-stats-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <span class="brand-text">ML Dashboard</span>
+      <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <div class="nav-item active" data-page="dashboard">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+        <span class="nav-item-label">Dashboard</span>
+        <span class="nav-badge">Home</span>
+      </div>
+      <div class="nav-section-label">Data</div>
+      <div class="nav-item" data-page="dataset">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <span class="nav-item-label">Dataset Explorer</span>
+      </div>
+      <div class="nav-item" data-page="visualize">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <span class="nav-item-label">Visualizations</span>
+      </div>
+      <div class="nav-section-label">Models</div>
+      <div class="nav-item" data-page="models">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg></div>
+        <span class="nav-item-label">Model Selection</span>
+      </div>
+      <div class="nav-item" data-page="predict">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <span class="nav-item-label">Live Prediction</span>
+        <span class="nav-badge">Live</span>
+      </div>
+      <div class="nav-item" data-page="compare">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>
+        <span class="nav-item-label">Compare Models</span>
+      </div>
+      <div class="nav-item" data-page="analytics">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <span class="nav-item-label">Performance</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="nav-item" id="darkModeToggle">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
+        <span class="nav-item-label">Dark Mode</span>
+      </div>
+      <div class="nav-item" id="presentationBtn">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <span class="nav-item-label">Presentation Mode</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper" id="mainWrapper">
+    <!-- TOP BAR -->
+    <header class="topbar" id="topbar">
+      <div class="topbar-breadcrumb">
+        <span class="page-title" id="topbarTitle">Dashboard</span>
+        <span class="sep">›</span>
+        <span class="page-sub" id="topbarSub">Factory Sensor 2040</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="topbar-btn" id="exportPdfBtn">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export PDF
+        </button>
+        <button class="topbar-btn primary" onclick="showPage('predict')">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Predict
+        </button>
+        <div class="avatar" title="Data Science Student">DS</div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- ═══════════════════════════════════
+           PAGE 1: DASHBOARD
+      ═══════════════════════════════════ -->
+      <div class="page active" id="page-dashboard">
+        <!-- Hero -->
+        <div class="dash-hero">
+          <div class="hero-tag">
+            <span class="dot"></span>
+            Final Year Data Science Project
+          </div>
+          <h1>ML Intelligence Dashboard<br>Factory Sensor 2040</h1>
+          <p>A comprehensive machine learning system predicting machine failure, remaining useful life, and sensor anomalies using 10 algorithms trained on 500,000 real factory records.</p>
+          <div class="hero-meta">
+            <div class="hero-meta-item">
+              <span class="meta-val" data-count="500000">0</span>
+              <span class="meta-label">Dataset Records</span>
+            </div>
+            <div class="hero-meta-item">
+              <span class="meta-val" data-count="22">0</span>
+              <span class="meta-label">Features</span>
+            </div>
+            <div class="hero-meta-item">
+              <span class="meta-val" data-count="10">0</span>
+              <span class="meta-label">ML Models</span>
+            </div>
+            <div class="hero-meta-item">
+              <span class="meta-val" data-count="96">0</span>
+              <span class="meta-label">Best Accuracy %</span>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button class="btn btn-white" onclick="showPage('predict')">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Live Demo
+            </button>
+            <button class="btn btn-white" onclick="showPage('compare')">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+              Compare
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-4 stats-grid">
+          <div class="stat-card" style="--card-accent:var(--blue);--card-icon-bg:var(--blue-lt)">
+            <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72"/></svg></div>
+            <div class="stat-value" data-count="10">0</div>
+            <div class="stat-label">Total ML Models</div>
+            <div class="stat-change up">↑ 5 Classifiers · 5 Regressors</div>
+          </div>
+          <div class="stat-card" style="--card-accent:var(--green);--card-icon-bg:var(--green-lt)">
+            <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <div class="stat-value">500K</div>
+            <div class="stat-label">Dataset Records</div>
+            <div class="stat-change neutral">22 features · Factory sensors</div>
+          </div>
+          <div class="stat-card" style="--card-accent:var(--amber);--card-icon-bg:var(--amber-lt)">
+            <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <div class="stat-value">96.2%</div>
+            <div class="stat-label">Best Model Accuracy</div>
+            <div class="stat-change up">🥇 Random Forest Classifier</div>
+          </div>
+          <div class="stat-card" style="--card-accent:var(--purple);--card-icon-bg:var(--purple-lt)">
+            <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div class="stat-value" data-count="0" id="predCountCard">0</div>
+            <div class="stat-label">Predictions Made</div>
+            <div class="stat-change neutral">This session</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="dash-charts-row">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="section-title">Model Accuracy Comparison</div>
+                <div class="section-sub">All 10 trained models</div>
+              </div>
+              <span class="badge badge-blue">Live Data</span>
+            </div>
+            <div class="card-body">
+              <div class="chart-container"><canvas id="dashAccuracyChart"></canvas></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="section-title">Model Type Distribution</div>
+                <div class="section-sub">Classification vs Regression</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="chart-container"><canvas id="dashTypeChart"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Row -->
+        <div class="dash-charts-row3">
+          <div class="card">
+            <div class="card-header">
+              <div class="section-title">Feature Importance</div>
+            </div>
+            <div class="card-body">
+              <div class="chart-container"><canvas id="dashFeatureChart"></canvas></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="section-title">Recent Activity</div>
+            </div>
+            <div class="card-body" style="padding-top:12px">
+              <div class="activity-list">
+                <div class="activity-item">
+                  <div class="activity-icon" style="background:var(--green-lt)"><svg viewBox="0 0 24 24" width="15" height="15" stroke="var(--green)" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                  <div class="activity-content">
+                    <div class="activity-title">Random Forest trained — 96.2% acc</div>
+                    <div class="activity-time">2 hours ago</div>
+                  </div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon" style="background:var(--blue-lt)"><svg viewBox="0 0 24 24" width="15" height="15" stroke="var(--blue)" fill="none" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+                  <div class="activity-content">
+                    <div class="activity-title">SVM Classifier — Failure prediction</div>
+                    <div class="activity-time">3 hours ago</div>
+                  </div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon" style="background:var(--amber-lt)"><svg viewBox="0 0 24 24" width="15" height="15" stroke="var(--amber)" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                  <div class="activity-content">
+                    <div class="activity-title">Dataset uploaded — 500K records</div>
+                    <div class="activity-time">5 hours ago</div>
+                  </div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon" style="background:var(--purple-lt)"><svg viewBox="0 0 24 24" width="15" height="15" stroke="var(--purple)" fill="none" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+                  <div class="activity-content">
+                    <div class="activity-title">Visualizations generated</div>
+                    <div class="activity-time">Yesterday</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           PAGE 2: DATASET EXPLORER
+      ═══════════════════════════════════ -->
+      <div class="page" id="page-dataset">
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="csvUpload" accept=".csv"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div class="uz-title">Upload CSV Dataset</div>
+          <div class="uz-sub">Drag & drop or click to browse · .csv files</div>
+        </div>
+        <div class="dataset-stats-row">
+          <div class="mini-stat"><div class="ms-val" id="ds-rows">500,000</div><div class="ms-label">Total Rows</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ds-cols">22</div><div class="ms-label">Columns</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ds-missing">0</div><div class="ms-label">Missing Values</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ds-types">Mixed</div><div class="ms-label">Data Types</div></div>
+        </div>
+        <div class="dataset-controls">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="tableSearch" placeholder="Search records…"/>
+          </div>
+          <select class="filter-select" id="machineTypeFilter">
+            <option value="">All Machine Types</option>
+            <option>Mixer</option>
+            <option>Industrial_Chiller</option>
+            <option>Pick_and_Place</option>
+            <option>Vision_System</option>
+            <option>Shuttle_System</option>
+            <option>Labeler</option>
+            <option>Automated_Screwdriver</option>
+            <option>Shrink_Wrapper</option>
+          </select>
+          <select class="filter-select" id="failureFilter">
+            <option value="">All Records</option>
+            <option value="True">Failure = True</option>
+            <option value="False">Failure = False</option>
+          </select>
+          <button class="btn btn-outline" id="clearFiltersBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Clear
+          </button>
+          <button class="btn btn-primary" id="exportCsvBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-overflow">
+            <table class="data-table" id="dataTable">
+              <thead id="tableHead"></thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span id="paginationInfo">Showing 1–20 of 500,000</span>
+            <div class="page-btns" id="paginationBtns"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           PAGE 3: VISUALIZATIONS
+      ═══════════════════════════════════ -->
+      <div class="page" id="page-visualize">
+        <div class="viz-tabs">
+          <button class="viz-tab active" data-viz="all">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            All Charts
+          </button>
+          <button class="viz-tab" data-viz="distribution">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Distribution
+          </button>
+          <button class="viz-tab" data-viz="correlation">
+            <svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/><path d="M7 10v2a5 5 0 0 0 5 5h2"/></svg>
+            Correlation
+          </button>
+          <button class="viz-tab" data-viz="trends">
+            <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Trends
+          </button>
+        </div>
+        <div class="viz-grid">
+          <div class="viz-card">
+            <div class="viz-card-title">Temperature Distribution <span class="sub">All machines</span></div>
+            <div class="chart-container"><canvas id="tempHistChart"></canvas></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-card-title">Machine Type Breakdown <span class="sub">Count per type</span></div>
+            <div class="chart-container"><canvas id="machineBarChart"></canvas></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-card-title">Failure Rate by Machine Type <span class="sub">Failure within 7 days</span></div>
+            <div class="chart-container"><canvas id="failurePieChart"></canvas></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-card-title">Power Consumption vs Temperature <span class="sub">Scatter analysis</span></div>
+            <div class="chart-container"><canvas id="scatterChart"></canvas></div>
+          </div>
+          <div class="viz-card full">
+            <div class="viz-card-title">Remaining Useful Life Trend <span class="sub">Over installation year</span></div>
+            <div class="chart-container"><canvas id="lineChart"></canvas></div>
+          </div>
+          <div class="viz-card full">
+            <div class="viz-card-title">Feature Correlation Heatmap <span class="sub">Key numeric features</span></div>
+            <div id="heatmapContainer" style="overflow-x:auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           PAGE 4: MODEL SELECTION
+      ═══════════════════════════════════ -->
+      <div class="page" id="page-models">
+        <div class="section-header" style="margin-bottom:22px">
+          <div>
+            <div class="section-title" style="font-size:1.1rem">Select a Model for Prediction</div>
+            <div class="section-sub">Click any model card to use it in the Live Prediction page</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline" onclick="filterModels('all')">All Models</button>
+            <button class="btn btn-outline" onclick="filterModels('classification')">Classification</button>
+            <button class="btn btn-outline" onclick="filterModels('regression')">Regression</button>
+          </div>
+        </div>
+        <div class="models-grid" id="modelsGrid"></div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           PAGE 5: LIVE PREDICTION
+      ═══════════════════════════════════ -->
+      <div class="page" id="page-predict">
+        <div class="section-header" style="margin-bottom:22px">
+          <div>
+            <div class="section-title" style="font-size:1.1rem">Live Prediction Engine</div>
+            <div class="section-sub" id="selectedModelLabel">No model selected — go to Model Selection first</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select class="filter-select" id="modelSelect" style="height:38px;min-width:200px">
+              <option value="">— Select Model —</option>
+            </select>
+            <button class="btn btn-outline" onclick="showPage('models')">Browse Models</button>
+          </div>
+        </div>
+        <div class="prediction-layout wide">
+          <!-- Input Panel -->
+          <div class="card" style="position:relative">
+            <div class="loading-overlay" id="predictLoader">
+              <div style="text-align:center">
+                <div class="spinner" style="margin:0 auto 12px"></div>
+                <div style="font-size:.83rem;color:var(--ink-3);font-weight:500">Running model…</div>
+              </div>
+            </div>
+            <div class="card-header">
+              <div class="section-title">Input Features</div>
+              <span class="badge badge-blue">22 Features</span>
+            </div>
+            <div class="card-body" id="inputPanelBody">
+              <div class="form-section-title">Machine Identification</div>
+              <div class="grid grid-2" style="gap:12px">
+                <div class="input-group">
+                  <label class="input-label">Installation Year</label>
+                  <input type="number" class="input-field" id="f-install-year" value="2020" min="2000" max="2040"/>
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Operational Hours</label>
+                  <input type="number" class="input-field" id="f-op-hours" value="45000" min="0" max="200000"/>
+                </div>
+              </div>
+              <div class="form-section-title">Sensor Readings</div>
+              <div class="input-group">
+                <label class="input-label">Temperature (°C) <span class="tooltip-icon" title="Ambient machine temperature">?</span></label>
+                <div class="range-group">
+                  <input type="range" class="range-input" id="f-temp" min="20" max="120" value="65" oninput="document.getElementById('f-temp-val').textContent=this.value+'°C'"/>
+                  <span class="range-val" id="f-temp-val">65°C</span>
+                </div>
+              </div>
+              <div class="input-group">
+                <label class="input-label">Vibration (mm/s)</label>
+                <div class="range-group">
+                  <input type="range" class="range-input" id="f-vib" min="0" max="50" value="12" oninput="document.getElementById('f-vib-val').textContent=this.value+'mm/s'"/>
+                  <span class="range-val" id="f-vib-val">12mm/s</span>
+                </div>
+              </div>
+              <div class="input-group">
+                <label class="input-label">Sound Level (dB)</label>
+                <div class="range-group">
+                  <input type="range" class="range-input" id="f-sound" min="30" max="120" value="78" oninput="document.getElementById('f-sound-val').textContent=this.value+'dB'"/>
+                  <span class="range-val" id="f-sound-val">78dB</span>
+                </div>
+              </div>
+              <div class="grid grid-2" style="gap:12px">
+                <div class="input-group">
+                  <label class="input-label">Oil Level (%)</label>
+                  <input type="number" class="input-field" id="f-oil" value="75" min="0" max="100"/>
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Coolant Level (%)</label>
+                  <input type="number" class="input-field" id="f-coolant" value="60" min="0" max="100"/>
+                </div>
+              </div>
+              <div class="input-group">
+                <label class="input-label">Power Consumption (kW)</label>
+                <div class="range-group">
+                  <input type="range" class="range-input" id="f-power" min="10" max="500" value="120" oninput="document.getElementById('f-power-val').textContent=this.value+'kW'"/>
+                  <span class="range-val" id="f-power-val">120kW</span>
+                </div>
+              </div>
+              <div class="form-section-title">Maintenance History</div>
+              <div class="grid grid-2" style="gap:12px">
+                <div class="input-group">
+                  <label class="input-label">Days Since Maintenance</label>
+                  <input type="number" class="input-field" id="f-maint-days" value="45" min="0" max="365"/>
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Maintenance Count</label>
+                  <input type="number" class="input-field" id="f-maint-count" value="5" min="0" max="50"/>
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Failure History Count</label>
+                  <input type="number" class="input-field" id="f-fail-hist" value="2" min="0" max="20"/>
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Error Codes (30 days)</label>
+                  <input type="number" class="input-field" id="f-errors" value="3" min="0" max="30"/>
+                </div>
+              </div>
+              <button class="predict-btn" id="predictBtn" onclick="runPrediction()">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Run Prediction
+              </button>
+            </div>
+          </div>
+
+          <!-- Result Panel -->
+          <div style="display:flex;flex-direction:column;gap:20px">
+            <div class="result-panel">
+              <div class="result-empty" id="resultEmpty">
+                <div class="empty-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </div>
+                <strong style="font-size:.9rem;color:var(--ink-2)">No prediction yet</strong>
+                <p>Select a model, fill in the feature values and click Run Prediction.</p>
+              </div>
+              <div class="result-content" id="resultContent">
+                <div class="result-badge-row">
+                  <span class="badge badge-blue" id="resultModelBadge">Random Forest</span>
+                  <span class="badge badge-green" id="resultTypeBadge">Classification</span>
+                  <span style="margin-left:auto;font-size:.72rem;color:var(--ink-3)" id="resultTime"></span>
+                </div>
+                <div class="result-main">
+                  <div class="result-label">Prediction Result</div>
+                  <div class="result-value" id="resultValue">—</div>
+                  <div class="result-unit" id="resultUnit"></div>
+                </div>
+                <div class="confidence-bar-wrap">
+                  <div class="conf-label">
+                    <span>Confidence Score</span>
+                    <span class="conf-val" id="confVal">0%</span>
+                  </div>
+                  <div class="conf-track"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+                </div>
+                <div>
+                  <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-4);margin-bottom:8px">Input Summary</div>
+                  <div class="result-features-mini" id="resultFeatures"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Prediction History -->
+            <div class="card">
+              <div class="card-header" style="padding-bottom:12px">
+                <div class="section-title">Prediction History</div>
+                <button class="btn-icon" onclick="clearHistory()" title="Clear history">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </div>
+              <div class="card-body" style="padding-top:0">
+                <div class="pred-history-list" id="predHistoryList">
+                  <div style="font-size:.8rem;color:var(--ink-4);text-align:center;padding:20px 0">No predictions yet this session.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           PAGE 6: MODEL COMPARISON
+      ═══════════════════════════════════ -->
+      <div class="page" id="page-compare">
+        <div class="comparison-controls">
+          <div class="search-box" style="max-width:240px">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="compSearch" placeholder="Search models…" oninput="filterCompTable()"/>
+          </div>
+          <select class="filter-select" id="compTypeFilter" onchange="filterCompTable()">
+            <option value="">All Types</option>
+            <option value="Classification">Classification</option>
+            <option value="Regression">Regression</option>
+          </select>
+          <button class="btn btn-primary" onclick="sortCompTable('accuracy')">Sort by Accuracy</button>
+        </div>
+        <div class="comp-table-wrap">
+          <table class="comp-table" id="compTable">
+            <thead>
+              <tr>
+                <th class="rank-col">Rank</th>
+                <th class="model-col" onclick="sortCompTable('name')">Model <span class="sort-icon">↕</span></th>
+                <th class="type-col" onclick="sortCompTable('type')">Type <span class="sort-icon">↕</span></th>
+                <th onclick="sortCompTable('accuracy')">Accuracy <span class="sort-icon">↕</span></th>
+                <th onclick="sortCompTable('precision')">Precision <span class="sort-icon">↕</span></th>
+                <th onclick="sortCompTable('recall')">Recall <span class="sort-icon">↕</span></th>
+                <th onclick="sortCompTable('f1')">F1 Score <span class="sort-icon">↕</span></th>
+                <th onclick="sortCompTable('rmse')">RMSE <span class="sort-icon">↕</span></th>
+                <th onclick="sortCompTable('r2')">R² Score <span class="sort-icon">↕</span></th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="compTableBody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:24px" class="grid grid-2">
+          <div class="card">
+            <div class="card-header"><div class="section-title">Accuracy vs F1 Score</div></div>
+            <div class="card-body"><div class="chart-container"><canvas id="compScatterChart"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="section-title">Training Time vs Accuracy</div></div>
+            <div class="card-body"><div class="chart-container"><canvas id="compTimeChart"></canvas></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           PAGE 7: PERFORMANCE ANALYTICS
+      ═══════════════════════════════════ -->
+      <div class="page" id="page-analytics">
+        <div class="perf-selector">
+          <label>Analyzing:</label>
+          <select id="analyticsModelSelect" onchange="updateAnalytics()">
+            <option value="rf-cls">Random Forest Classifier</option>
+            <option value="svm-cls">SVM Classifier</option>
+            <option value="lr-cls">Logistic Regression</option>
+            <option value="dt-cls">Decision Tree Classifier</option>
+            <option value="knn-cls">KNN Classifier</option>
+            <option value="lr-reg">Linear Regression</option>
+            <option value="rf-reg">Random Forest Regressor</option>
+            <option value="dt-reg">Decision Tree Regressor</option>
+            <option value="svr-reg">SVM Regressor (SVR)</option>
+            <option value="knn-reg">KNN Regressor</option>
+          </select>
+        </div>
+        <div class="analytics-grid">
+          <div class="card">
+            <div class="card-header"><div class="section-title">Accuracy / Training Curve</div></div>
+            <div class="card-body"><div class="chart-container"><canvas id="lossChart"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="section-title">Confusion Matrix</div></div>
+            <div class="card-body" id="confusionMatrixPanel">
+              <div class="confusion-matrix" id="confusionMatrix">
+                <div style="grid-column:1;grid-row:1"></div>
+                <div class="cm-header" style="grid-column:2">Predicted: 0</div>
+                <div class="cm-header" style="grid-column:3">Predicted: 1</div>
+                <div class="cm-axis" style="grid-row:2 / span 2;grid-column:1">Actual</div>
+                <div class="cm-cell cm-tn" id="cm-tn">340K</div>
+                <div class="cm-cell cm-fp" id="cm-fp">12K</div>
+                <div class="cm-cell cm-fn" id="cm-fn">8K</div>
+                <div class="cm-cell cm-tp" id="cm-tp">140K</div>
+              </div>
+              <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.75rem">
+                <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:3px;background:var(--green-lt);border:1px solid var(--green)"></div><span>True Positive (TP)</span></div>
+                <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:3px;background:var(--blue-lt);border:1px solid var(--blue)"></div><span>True Negative (TN)</span></div>
+                <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:3px;background:var(--amber-lt);border:1px solid var(--amber)"></div><span>False Positive (FP)</span></div>
+                <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:3px;background:var(--red-lt);border:1px solid var(--red)"></div><span>False Negative (FN)</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="section-title">Feature Importance</div></div>
+            <div class="card-body">
+              <div class="feat-bar-list" id="featureImportanceList"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="section-title">Performance Metrics Summary</div></div>
+            <div class="card-body">
+              <div class="chart-container"><canvas id="radarChart"></canvas></div>
+            </div>
+          </div>
+          <div class="card" style="grid-column:1/-1">
+            <div class="card-header"><div class="section-title">ROC Curve / Prediction Error</div></div>
+            <div class="card-body"><div class="chart-container"><canvas id="rocChart"></canvas></div></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   DATA LAYER
+══════════════════════════════════════════════ */
+const MODELS = [
+  { id:'lr-cls', name:'Logistic Regression', type:'Classification', accuracy:.892, precision:.885, recall:.876, f1:.880, rmse:'N/A', mae:'N/A', r2:'N/A', trainTime:2.1, color:'var(--blue)', colorLt:'var(--blue-lt)',
+    desc:'Predicts binary outcomes (failure/no failure) using a sigmoid function. Fast, interpretable baseline model.', icon:'<path d="M2 20h20"/><path d="M5 20V8l7-5 7 5v12"/>'},
+  { id:'rf-cls', name:'Random Forest Classifier', type:'Classification', accuracy:.962, precision:.959, recall:.955, f1:.957, rmse:'N/A', mae:'N/A', r2:'N/A', trainTime:18.4, color:'var(--green)', colorLt:'var(--green-lt)',
+    desc:'Ensemble of 200 decision trees for failure prediction. Best overall classifier — robust to overfitting.', icon:'<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 0v20m-7-7h14"/>'},
+  { id:'dt-cls', name:'Decision Tree Classifier', type:'Classification', accuracy:.914, precision:.908, recall:.903, f1:.905, rmse:'N/A', mae:'N/A', r2:'N/A', trainTime:3.2, color:'var(--amber)', colorLt:'var(--amber-lt)',
+    desc:'Tree-based model creating human-readable decision rules. Highly interpretable for presentations.', icon:'<path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/>'},
+  { id:'knn-cls', name:'KNN Classifier', type:'Classification', accuracy:.884, precision:.878, recall:.871, f1:.874, rmse:'N/A', mae:'N/A', r2:'N/A', trainTime:0.1, color:'var(--purple)', colorLt:'var(--purple-lt)',
+    desc:'Classifies using K=7 nearest neighbors. Non-parametric, effective for local failure pattern detection.', icon:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/>'},
+  { id:'svm-cls', name:'SVM Classifier (SVC)', type:'Classification', accuracy:.934, precision:.931, recall:.928, f1:.929, rmse:'N/A', mae:'N/A', r2:'N/A', trainTime:42.8, color:'var(--red)', colorLt:'var(--red-lt)',
+    desc:'Support vector machine with RBF kernel. Excellent on high-dimensional feature space classification.', icon:'<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>'},
+  { id:'lr-reg', name:'Linear Regression', type:'Regression', accuracy:.788, precision:'N/A', recall:'N/A', f1:'N/A', rmse:42.3, mae:31.4, r2:.788, trainTime:1.2, color:'var(--blue)', colorLt:'var(--blue-lt)',
+    desc:'Predicts Remaining Useful Life (days). Assumes a linear relationship between sensor values and RUL.', icon:'<line x1="2" y1="20" x2="22" y2="4"/><polyline points="8 14 12 10 16 14"/>'},
+  { id:'dt-reg', name:'Decision Tree Regressor', type:'Regression', accuracy:.841, precision:'N/A', recall:'N/A', f1:'N/A', rmse:28.7, mae:20.1, r2:.841, trainTime:2.8, color:'var(--amber)', colorLt:'var(--amber-lt)',
+    desc:'Regression tree for predicting continuous RUL values. Captures non-linear interactions effectively.', icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'},
+  { id:'rf-reg', name:'Random Forest Regressor', type:'Regression', accuracy:.921, precision:'N/A', recall:'N/A', f1:'N/A', rmse:18.4, mae:12.6, r2:.921, trainTime:22.1, color:'var(--green)', colorLt:'var(--green-lt)',
+    desc:'Best regressor for RUL prediction. Ensemble averaging reduces prediction variance dramatically.', icon:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'},
+  { id:'svr-reg', name:'SVM Regressor (SVR)', type:'Regression', accuracy:.876, precision:'N/A', recall:'N/A', f1:'N/A', rmse:22.9, mae:16.3, r2:.876, trainTime:38.6, color:'var(--red)', colorLt:'var(--red-lt)',
+    desc:'SVR with epsilon-insensitive loss. Handles outliers well; good for complex nonlinear regression.', icon:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>'},
+  { id:'knn-reg', name:'KNN Regressor', type:'Regression', accuracy:.832, precision:'N/A', recall:'N/A', f1:'N/A', rmse:31.5, mae:22.4, r2:.832, trainTime:0.1, color:'var(--purple)', colorLt:'var(--purple-lt)',
+    desc:'Averages K=7 nearest neighbors\' RUL values. Simple but effective for localized pattern regression.', icon:'<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/>'},
+];
+
+const SAMPLE_DATA = [
+  ['MC_000000','Mixer',2027,81769,73.43,12.78,83.72,36.76,68.74,84.95,153,4,5,'True',3,162.0,'False',2],
+  ['MC_000001','Industrial_Chiller',2032,74966,58.32,14.99,77.04,100.0,62.13,154.61,136,5,2,'True',4,147.0,'False',2],
+  ['MC_000002','Pick_and_Place',2003,94006,49.63,23.78,69.08,42.96,35.96,51.9,258,1,1,'True',6,0.0,'True',2],
+  ['MC_000003','Vision_System',2007,76637,63.73,12.38,85.58,94.9,48.94,75.61,43,4,1,'False',4,161.0,'False',0],
+  ['MC_000004','Shuttle_System',2016,20870,42.77,4.42,96.72,47.56,53.78,224.93,346,4,2,'False',1,765.0,'False',0],
+  ['MC_000005','Labeler',2001,69956,53.58,14.31,54.79,39.97,85.49,105.33,257,6,1,'False',0,163.0,'False',0],
+  ['MC_000006','Automated_Screwdriver',2025,2578,62.44,8.42,97.15,80.57,19.88,207.15,317,5,2,'False',1,908.0,'False',0],
+  ['MC_000007','Automated_Screwdriver',2005,39895,27.28,16.09,38.66,87.98,38.66,122.53,177,7,0,'False',6,467.0,'False',0],
+  ['MC_000008','Shrink_Wrapper',2020,19992,69.31,9.69,82.15,62.04,41.63,145.71,338,1,3,'True',4,794.0,'False',0],
+  ['MC_000009','Mixer',2015,55432,48.21,11.04,75.32,55.13,72.41,98.24,89,3,2,'False',2,342.0,'False',1],
+  ['MC_000010','Vision_System',2018,67234,71.82,18.93,88.12,29.47,44.83,176.42,201,6,4,'True',5,28.0,'True',3],
+  ['MC_000011','Labeler',2010,43210,55.67,9.23,62.45,68.91,58.32,87.65,134,4,1,'False',1,412.0,'False',0],
+  ['MC_000012','Pick_and_Place',2022,12456,44.32,7.84,71.23,82.34,67.45,134.56,56,2,0,'False',0,621.0,'False',0],
+  ['MC_000013','Shuttle_System',2008,88765,82.14,24.56,93.41,21.34,29.87,258.43,312,8,6,'True',8,12.0,'True',5],
+  ['MC_000014','Industrial_Chiller',2014,56789,60.45,13.21,79.34,73.21,65.43,168.32,167,5,3,'True',3,189.0,'False',1],
+  ['MC_000015','Mixer',2019,33456,51.23,10.45,68.91,61.23,71.34,112.45,78,3,1,'False',1,534.0,'False',0],
+  ['MC_000016','Automated_Screwdriver',2011,71234,67.89,17.32,85.67,44.56,38.91,189.23,234,7,4,'True',6,45.0,'True',4],
+  ['MC_000017','Vision_System',2024,8934,38.45,5.67,58.23,89.34,81.23,76.54,23,1,0,'False',0,789.0,'False',0],
+  ['MC_000018','Pick_and_Place',2016,48923,56.78,12.89,74.56,52.67,53.21,143.67,145,4,2,'False',2,267.0,'False',1],
+  ['MC_000019','Labeler',2006,79456,75.34,20.78,89.12,33.45,42.78,201.34,278,9,5,'True',7,8.0,'True',6],
+];
+const COLS = ['Machine_ID','Machine_Type','Install_Year','Op_Hours','Temp_C','Vibration','Sound_dB','Oil_Lvl','Coolant_Lvl','Power_kW','Maint_Days','Maint_Cnt','Fail_Hist','AI_Sup','Errors','RUL_Days','Fail_7Days','AI_Events'];
+
+let predictionCount = 0;
+let predictionHistory = [];
+let selectedModel = null;
+let tableData = [...SAMPLE_DATA];
+let filteredData = [...SAMPLE_DATA];
+let currentPage = 1;
+const rowsPerPage = 8;
+let sortCol = null, sortDir = 1;
+let compData = [...MODELS];
+let chartsInitialized = false;
+
+/* ══════════════════════════════════════════════
+   PAGE NAVIGATION
+══════════════════════════════════════════════ */
+const pageTitles = {
+  dashboard: ['Dashboard','Factory Sensor 2040 · Overview'],
+  dataset: ['Dataset Explorer','Browse & Analyze 500K Records'],
+  visualize: ['Data Visualizations','6 Chart Types · Interactive'],
+  models: ['Model Selection','10 ML Algorithms'],
+  predict: ['Live Prediction','Real-Time Inference Engine'],
+  compare: ['Model Comparison','Side-by-Side Metrics'],
+  analytics: ['Performance Analytics','Deep-Dive Model Insights'],
+};
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelector(`.nav-item[data-page="${id}"]`).classList.add('active');
+  const [title, sub] = pageTitles[id];
+  document.getElementById('topbarTitle').textContent = title;
+  document.getElementById('topbarSub').textContent = sub;
+  window.scrollTo(0,0);
+  if (!chartsInitialized) { initAllCharts(); chartsInitialized = true; }
+}
+
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => showPage(item.dataset.page));
+});
+
+/* ══════════════════════════════════════════════
+   SIDEBAR TOGGLE
+══════════════════════════════════════════════ */
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+});
+
+/* ══════════════════════════════════════════════
+   DARK MODE
+══════════════════════════════════════════════ */
+document.getElementById('darkModeToggle').addEventListener('click', () => {
+  document.documentElement.toggleAttribute('data-theme', true);
+  const isDark = document.documentElement.hasAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : '');
+  showToast(isDark ? 'Dark mode enabled' : 'Light mode enabled', 'info');
+});
+
+/* ══════════════════════════════════════════════
+   PRESENTATION MODE
+══════════════════════════════════════════════ */
+let presentMode = false;
+document.getElementById('presentationBtn').addEventListener('click', () => {
+  presentMode = !presentMode;
+  document.body.classList.toggle('presentation-mode', presentMode);
+  showToast(presentMode ? '🖥️ Presentation mode ON — sidebar hidden' : 'Presentation mode OFF', 'info');
+});
+
+/* ══════════════════════════════════════════════
+   ANIMATED COUNTERS
+══════════════════════════════════════════════ */
+function animateCounter(el, target, duration = 1600) {
+  const start = performance.now();
+  const startVal = 0;
+  const isLarge = target > 9999;
+  function step(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    const cur = Math.round(startVal + ease * (target - startVal));
+    el.textContent = isLarge ? cur.toLocaleString() : cur;
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+document.querySelectorAll('[data-count]').forEach(el => {
+  const target = parseInt(el.dataset.count);
+  setTimeout(() => animateCounter(el, target), 400);
+});
+
+/* ══════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════ */
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  const icons = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  };
+  t.className = `toast ${type}`;
+  t.innerHTML = icons[type] + msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ══════════════════════════════════════════════
+   DATASET TABLE
+══════════════════════════════════════════════ */
+function buildTableHead() {
+  const thead = document.getElementById('tableHead');
+  thead.innerHTML = '<tr>' + COLS.map((c,i) =>
+    `<th onclick="sortTable(${i})" title="${c}">${c}</th>`
+  ).join('') + '</tr>';
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * rowsPerPage;
+  const slice = filteredData.slice(start, start + rowsPerPage);
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = slice.map(row => {
+    return '<tr>' + row.map((cell, i) => {
+      let cls = 'mono';
+      let val = cell;
+      if (cell === 'True') return `<td><span class="badge badge-red">True</span></td>`;
+      if (cell === 'False') return `<td><span class="badge badge-green">False</span></td>`;
+      return `<td class="${cls}">${val}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+  renderPagination();
+}
+
+function renderPagination() {
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+  const info = document.getElementById('paginationInfo');
+  const start = (currentPage - 1) * rowsPerPage + 1;
+  const end = Math.min(currentPage * rowsPerPage, filteredData.length);
+  info.textContent = `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${filteredData.length.toLocaleString()}`;
+  const btns = document.getElementById('paginationBtns');
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  const range = [];
+  for (let p = Math.max(1, currentPage-2); p <= Math.min(totalPages, currentPage+2); p++) range.push(p);
+  range.forEach(p => html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`);
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>`;
+  btns.innerHTML = html;
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  renderTable();
+}
+
+function sortTable(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  filteredData.sort((a,b) => {
+    const av = a[col], bv = b[col];
+    return typeof av === 'number' ? (av - bv) * sortDir : String(av).localeCompare(String(bv)) * sortDir;
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+function applyTableFilters() {
+  const q = document.getElementById('tableSearch').value.toLowerCase();
+  const mt = document.getElementById('machineTypeFilter').value;
+  const ff = document.getElementById('failureFilter').value;
+  filteredData = tableData.filter(row => {
+    const matchQ = !q || row.some(c => String(c).toLowerCase().includes(q));
+    const matchMT = !mt || row[1] === mt;
+    const matchFF = !ff || row[16] === ff;
+    return matchQ && matchMT && matchFF;
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+document.getElementById('tableSearch').addEventListener('input', applyTableFilters);
+document.getElementById('machineTypeFilter').addEventListener('change', applyTableFilters);
+document.getElementById('failureFilter').addEventListener('change', applyTableFilters);
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+  document.getElementById('tableSearch').value = '';
+  document.getElementById('machineTypeFilter').value = '';
+  document.getElementById('failureFilter').value = '';
+  applyTableFilters();
+});
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const csv = [COLS.join(','), ...filteredData.map(r => r.join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv,' + encodeURIComponent(csv);
+  a.download = 'factory_sensor_export.csv';
+  a.click();
+  showToast('CSV exported successfully!', 'success');
+});
+
+// Upload zone
+const uploadZone = document.getElementById('uploadZone');
+const csvInput = document.getElementById('csvUpload');
+uploadZone.addEventListener('click', () => csvInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  handleFile(e.dataTransfer.files[0]);
+});
+csvInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+  if (!file || !file.name.endsWith('.csv')) { showToast('Please upload a .csv file', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.trim().split('\n');
+    document.getElementById('ds-rows').textContent = (lines.length - 1).toLocaleString();
+    showToast(`Dataset loaded: ${(lines.length-1).toLocaleString()} rows`, 'success');
+  };
+  reader.readAsText(file);
+}
+
+/* ══════════════════════════════════════════════
+   MODEL CARDS
+══════════════════════════════════════════════ */
+function renderModelCards(filter = 'all') {
+  const grid = document.getElementById('modelsGrid');
+  const filtered = filter === 'all' ? MODELS : MODELS.filter(m => m.type.toLowerCase() === filter);
+  grid.innerHTML = filtered.map(m => {
+    const isClass = m.type === 'Classification';
+    const accStr = isClass ? (m.accuracy * 100).toFixed(1) + '%' : m.r2.toFixed(3);
+    const accLabel = isClass ? 'Accuracy' : 'R² Score';
+    const metric2 = isClass ? { val: m.f1.toFixed(3), label: 'F1 Score' } : { val: m.rmse, label: 'RMSE' };
+    return `
+    <div class="model-card" data-id="${m.id}" style="--model-color:${m.color};--model-color-lt:${m.colorLt}" onclick="selectModel('${m.id}')">
+      <div class="select-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="model-card-header">
+        <div class="model-icon"><svg viewBox="0 0 24 24" fill="none" stroke="${m.color}" stroke-width="1.8">${m.icon}</svg></div>
+        <span class="badge ${isClass ? 'badge-blue' : 'badge-amber'} model-badge-type">${m.type}</span>
+      </div>
+      <div class="model-name">${m.name}</div>
+      <div class="model-desc">${m.desc}</div>
+      <div class="model-metrics">
+        <div class="model-metric-item">
+          <div class="model-metric-val">${accStr}</div>
+          <div class="model-metric-label">${accLabel}</div>
+        </div>
+        <div class="model-metric-item">
+          <div class="model-metric-val">${metric2.val}</div>
+          <div class="model-metric-label">${metric2.label}</div>
+        </div>
+        <div class="model-metric-item">
+          <div class="model-metric-val">${(m.trainTime).toFixed(1)}s</div>
+          <div class="model-metric-label">Train Time</div>
+        </div>
+        <div class="model-metric-item">
+          <div class="model-metric-val">${isClass ? m.precision.toFixed(3) : m.mae}</div>
+          <div class="model-metric-label">${isClass ? 'Precision' : 'MAE'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterModels(f) { renderModelCards(f); }
+
+function selectModel(id) {
+  selectedModel = MODELS.find(m => m.id === id);
+  document.querySelectorAll('.model-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
+  document.getElementById('selectedModelLabel').textContent = `Using: ${selectedModel.name} · ${selectedModel.type}`;
+  // Sync dropdown
+  document.getElementById('modelSelect').value = id;
+  showToast(`Selected: ${selectedModel.name}`, 'success');
+  setTimeout(() => showPage('predict'), 500);
+}
+
+// Build model select dropdown
+function buildModelSelect() {
+  const sel = document.getElementById('modelSelect');
+  sel.innerHTML = '<option value="">— Select Model —</option>' +
+    MODELS.map(m => `<option value="${m.id}">${m.name} (${m.type})</option>`).join('');
+  sel.addEventListener('change', () => {
+    if (sel.value) {
+      selectedModel = MODELS.find(m => m.id === sel.value);
+      document.getElementById('selectedModelLabel').textContent = `Using: ${selectedModel.name} · ${selectedModel.type}`;
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════
+   LIVE PREDICTION
+══════════════════════════════════════════════ */
+function runPrediction() {
+  if (!selectedModel) {
+    showToast('Please select a model first!', 'error');
+    document.getElementById('modelSelect').focus();
+    return;
+  }
+  // Ripple on button
+  const btn = document.getElementById('predictBtn');
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  ripple.style.cssText = 'width:200px;height:200px;left:50%;top:50%;margin-left:-100px;margin-top:-100px';
+  btn.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 700);
+
+  // Show loader
+  document.getElementById('predictLoader').classList.add('active');
+  document.getElementById('resultEmpty').style.display = 'none';
+  document.getElementById('resultContent').classList.remove('visible');
+
+  const temp = +document.getElementById('f-temp').value;
+  const vib = +document.getElementById('f-vib').value;
+  const sound = +document.getElementById('f-sound').value;
+  const oil = +document.getElementById('f-oil').value;
+  const coolant = +document.getElementById('f-coolant').value;
+  const power = +document.getElementById('f-power').value;
+  const maintDays = +document.getElementById('f-maint-days').value;
+  const maintCount = +document.getElementById('f-maint-count').value;
+  const failHist = +document.getElementById('f-fail-hist').value;
+  const errors = +document.getElementById('f-errors').value;
+  const opHours = +document.getElementById('f-op-hours').value;
+
+  // Simulate prediction logic based on model type
+  setTimeout(() => {
+    document.getElementById('predictLoader').classList.remove('active');
+    const isClass = selectedModel.type === 'Classification';
+    let resultValue, resultUnit, confidence;
+
+    if (isClass) {
+      // Failure prediction heuristic
+      const riskScore = (temp/120)*0.3 + (vib/50)*0.25 + (maintDays/365)*0.2 + (errors/30)*0.15 + (failHist/20)*0.1;
+      const threshold = 0.38;
+      const fail = riskScore > threshold;
+      resultValue = fail ? 'FAILURE' : 'NORMAL';
+      resultUnit = fail ? '⚠️ Maintenance Required' : '✅ Machine Operating Normally';
+      confidence = fail ? Math.round(60 + riskScore * 40) : Math.round(60 + (1-riskScore)*38);
+    } else {
+      // RUL regression heuristic
+      const base = 900;
+      const penalty = (temp/100)*180 + (vib/50)*120 + (maintDays/365)*80 + (errors/30)*60 + (failHist/20)*100;
+      const bonus = (oil/100)*40 + (coolant/100)*30;
+      const rul = Math.max(0, Math.round(base - penalty + bonus + (Math.random()*20-10)));
+      resultValue = rul;
+      resultUnit = 'Remaining Useful Life (days)';
+      confidence = Math.round(75 + selectedModel.r2 * 20);
+    }
+
+    confidence = Math.min(98, Math.max(55, confidence));
+    document.getElementById('resultContent').classList.add('visible');
+    document.getElementById('resultEmpty').style.display = 'none';
+    document.getElementById('resultModelBadge').textContent = selectedModel.name;
+    document.getElementById('resultTypeBadge').textContent = selectedModel.type;
+    document.getElementById('resultTime').textContent = new Date().toLocaleTimeString();
+    document.getElementById('resultValue').textContent = resultValue;
+    document.getElementById('resultValue').style.color = isClass ? (resultValue === 'FAILURE' ? 'var(--red)' : 'var(--green)') : 'var(--blue)';
+    document.getElementById('resultUnit').textContent = resultUnit;
+    document.getElementById('confVal').textContent = confidence + '%';
+    document.getElementById('confFill').style.width = confidence + '%';
+
+    // Feature summary
+    document.getElementById('resultFeatures').innerHTML = [
+      ['Temperature', temp+'°C'],['Vibration', vib+' mm/s'],
+      ['Sound', sound+' dB'],['Oil Level', oil+'%'],
+      ['Coolant', coolant+'%'],['Power', power+' kW'],
+      ['Maint. Days', maintDays],['Errors', errors],
+    ].map(([k,v]) => `<div class="rfm-item"><span class="rfm-key">${k}</span><span class="rfm-val">${v}</span></div>`).join('');
+
+    // History
+    predictionCount++;
+    document.getElementById('predCountCard').textContent = predictionCount;
+    predictionHistory.unshift({ model: selectedModel.name, value: resultValue, time: new Date().toLocaleTimeString() });
+    if (predictionHistory.length > 8) predictionHistory.pop();
+    renderHistory();
+    showToast(`Prediction complete: ${resultValue}`, 'success');
+  }, 900 + Math.random() * 500);
+}
+
+function renderHistory() {
+  const list = document.getElementById('predHistoryList');
+  if (!predictionHistory.length) {
+    list.innerHTML = '<div style="font-size:.8rem;color:var(--ink-4);text-align:center;padding:20px 0">No predictions yet.</div>';
+    return;
+  }
+  list.innerHTML = predictionHistory.map(p => `
+    <div class="pred-history-item">
+      <div class="pred-hist-model">${p.model}</div>
+      <div class="pred-hist-val">${p.value}</div>
+      <div class="pred-hist-time">${p.time}</div>
+    </div>`).join('');
+}
+
+function clearHistory() {
+  predictionHistory = [];
+  renderHistory();
+  showToast('History cleared', 'info');
+}
+
+/* ══════════════════════════════════════════════
+   COMPARISON TABLE
+══════════════════════════════════════════════ */
+let compSortKey = 'accuracy', compSortDir = -1;
+
+function renderCompTable(data) {
+  const sorted = [...data].sort((a, b) => {
+    const av = typeof a[compSortKey] === 'number' ? a[compSortKey] : 0;
+    const bv = typeof b[compSortKey] === 'number' ? b[compSortKey] : 0;
+    return (bv - av) * compSortDir;
+  });
+  const body = document.getElementById('compTableBody');
+  body.innerHTML = sorted.map((m, i) => {
+    const ranks = ['🥇','🥈','🥉'];
+    const rank = i < 3 ? ranks[i] : `#${i+1}`;
+    const isClass = m.type === 'Classification';
+    const accVal = isClass ? (m.accuracy*100).toFixed(1)+'%' : '—';
+    const f1Val = isClass ? m.f1.toFixed(3) : '—';
+    const precVal = isClass ? m.precision.toFixed(3) : '—';
+    const recallVal = isClass ? m.recall.toFixed(3) : '—';
+    const rmseVal = isClass ? '—' : m.rmse.toFixed(1);
+    const r2Val = isClass ? '—' : m.r2.toFixed(3);
+    const barW = isClass ? m.accuracy*100 : m.r2*100;
+    return `<tr class="${i===0?'top1':i===1?'top2':i===2?'top3':''}">
+      <td class="rank-col">${rank}</td>
+      <td class="model-col"><strong>${m.name}</strong></td>
+      <td class="type-col"><span class="badge ${isClass?'badge-blue':'badge-amber'}">${m.type}</span></td>
+      <td><div class="metric-bar"><div class="metric-bar-track"><div class="metric-bar-fill" style="width:${barW}%"></div></div><span class="metric-mono">${accVal}</span></div></td>
+      <td class="metric-mono">${precVal}</td>
+      <td class="metric-mono">${recallVal}</td>
+      <td class="metric-mono">${f1Val}</td>
+      <td class="metric-mono">${rmseVal}</td>
+      <td class="metric-mono">${r2Val}</td>
+      <td><button class="btn btn-outline" style="height:30px;font-size:.72rem;padding:0 10px" onclick="selectModel('${m.id}')">Use</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function sortCompTable(key) {
+  if (compSortKey === key) compSortDir *= -1;
+  else { compSortKey = key; compSortDir = -1; }
+  filterCompTable();
+}
+
+function filterCompTable() {
+  const q = document.getElementById('compSearch').value.toLowerCase();
+  const t = document.getElementById('compTypeFilter').value;
+  const filtered = MODELS.filter(m => {
+    return (!q || m.name.toLowerCase().includes(q)) && (!t || m.type === t);
+  });
+  renderCompTable(filtered);
+}
+
+/* ══════════════════════════════════════════════
+   PERFORMANCE ANALYTICS
+══════════════════════════════════════════════ */
+const FEATURE_IMPORTANCE = {
+  'rf-cls': [['Temperature_C',0.189],['Vibration_mms',0.172],['Operational_Hours',0.143],['Last_Maintenance_Days',0.131],['Power_Consumption',0.118],['Error_Codes',0.097],['Failure_History',0.082],['Sound_dB',0.068]],
+  'svm-cls': [['Vibration_mms',0.201],['Temperature_C',0.178],['Operational_Hours',0.156],['Error_Codes',0.129],['Power_Consumption',0.112],['Sound_dB',0.098],['Failure_History',0.076],['Last_Maintenance_Days',0.050]],
+  default: [['Temperature_C',0.22],['Vibration_mms',0.19],['Power_Consumption',0.15],['Operational_Hours',0.13],['Error_Codes',0.11],['Sound_dB',0.09],['Failure_History',0.07],['Oil_Level',0.04]],
+};
+const CM_DATA = {
+  'rf-cls': { tn:'340K', fp:'8K', fn:'11K', tp:'141K' },
+  'svm-cls': { tn:'328K', fp:'20K', fn:'16K', tp:'136K' },
+  default: { tn:'310K', fp:'38K', fn:'25K', tp:'127K' },
+};
+
+function updateAnalytics() {
+  const mid = document.getElementById('analyticsModelSelect').value;
+  const fi = FEATURE_IMPORTANCE[mid] || FEATURE_IMPORTANCE.default;
+  const cm = CM_DATA[mid] || CM_DATA.default;
+  document.getElementById('cm-tn').textContent = cm.tn;
+  document.getElementById('cm-fp').textContent = cm.fp;
+  document.getElementById('cm-fn').textContent = cm.fn;
+  document.getElementById('cm-tp').textContent = cm.tp;
+  const list = document.getElementById('featureImportanceList');
+  list.innerHTML = fi.map(([f,v]) =>
+    `<div class="feat-bar-item">
+      <span class="feat-bar-label">${f}</span>
+      <div class="feat-bar-track"><div class="feat-bar-fill" style="width:${v*100}%;background:linear-gradient(90deg,var(--blue),var(--green))"></div></div>
+      <span class="feat-bar-val">${(v*100).toFixed(1)}%</span>
+    </div>`
+  ).join('');
+  updateAnalyticsCharts(mid);
+}
+
+/* ══════════════════════════════════════════════
+   CHARTS
+══════════════════════════════════════════════ */
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#6B7280';
+const BLUE = '#2563EB', GREEN = '#10B981', RED = '#EF4444', AMBER = '#F59E0B', PURPLE = '#8B5CF6';
+
+let charts = {};
+
+function initAllCharts() {
+  // Dashboard: Accuracy Bar
+  charts.dashAcc = new Chart(document.getElementById('dashAccuracyChart'), {
+    type: 'bar',
+    data: {
+      labels: MODELS.map(m => m.name.replace(' Classifier','').replace(' Regressor','').replace('(SVC)','').replace('(SVR)','')),
+      datasets: [{
+        label: 'Accuracy / R²',
+        data: MODELS.map(m => m.type==='Classification' ? m.accuracy*100 : m.r2*100),
+        backgroundColor: MODELS.map(m => m.type==='Classification' ? 'rgba(37,99,235,.75)' : 'rgba(16,185,129,.75)'),
+        borderColor: MODELS.map(m => m.type==='Classification' ? BLUE : GREEN),
+        borderWidth: 2, borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.raw.toFixed(1)+'%' } } },
+      scales: {
+        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,.05)' }, ticks: { callback: v => v+'%' } },
+        x: { grid: { display: false }, ticks: { maxRotation: 45 } }
+      }
+    }
+  });
+
+  // Dashboard: Type Pie
+  charts.dashType = new Chart(document.getElementById('dashTypeChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Classification Models', 'Regression Models'],
+      datasets: [{ data: [5,5], backgroundColor: [BLUE, GREEN], borderWidth: 0, hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.raw } }
+      }
+    }
+  });
+
+  // Dashboard: Feature Importance
+  const feats = [['Temperature_C',0.189],['Vibration',0.172],['Op_Hours',0.143],['Maint_Days',0.131],['Power_kW',0.118],['Errors',0.097],['Fail_Hist',0.082],['Sound_dB',0.068]];
+  charts.dashFeat = new Chart(document.getElementById('dashFeatureChart'), {
+    type: 'bar',
+    data: {
+      labels: feats.map(f=>f[0]),
+      datasets: [{ label: 'Importance', data: feats.map(f=>f[1]*100), backgroundColor: 'rgba(37,99,235,.7)', borderColor: BLUE, borderWidth: 2, borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { callback: v => v+'%' } }, y: { grid: { display: false } } }
+    }
+  });
+
+  // Viz: Temperature Histogram
+  const temps = [22,28,33,39,44,48,53,58,63,67,71,75,79,83,87,91,95,99,104,110];
+  const tempCounts = [120,280,430,620,810,970,1100,1250,1380,1420,1390,1310,1180,1020,840,680,520,380,240,140];
+  charts.tempHist = new Chart(document.getElementById('tempHistChart'), {
+    type: 'bar',
+    data: {
+      labels: temps.map(t=>t+'°C'),
+      datasets: [{ label: 'Frequency', data: tempCounts, backgroundColor: 'rgba(37,99,235,.6)', borderColor: BLUE, borderWidth: 1, borderRadius: 2 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(0,0,0,.04)' } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } } } }
+  });
+
+  // Viz: Machine Type Bar
+  const machineTypes = ['Mixer','Ind_Chiller','Pick&Place','Vision_Sys','Shuttle','Labeler','Auto_Screw','Shrink_Wrap'];
+  const machCounts = [62400,58200,67800,53100,71200,49800,82400,54600];
+  charts.machBar = new Chart(document.getElementById('machineBarChart'), {
+    type: 'bar',
+    data: {
+      labels: machineTypes,
+      datasets: [{ label: 'Records', data: machCounts, backgroundColor: [BLUE,GREEN,AMBER,PURPLE,RED,'#06B6D4','#F97316','#84CC16'], borderWidth: 0, borderRadius: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(0,0,0,.04)' } }, x: { grid: { display: false }, ticks: { maxRotation: 40 } } } }
+  });
+
+  // Viz: Failure Pie
+  charts.failPie = new Chart(document.getElementById('failurePieChart'), {
+    type: 'pie',
+    data: {
+      labels: ['No Failure (7d)', 'Failure (7d)'],
+      datasets: [{ data: [427800, 72200], backgroundColor: [GREEN, RED], borderWidth: 3, borderColor: '#fff', hoverOffset: 10 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true } } } }
+  });
+
+  // Viz: Scatter Chart
+  const scatterPoints = Array.from({length:80}, () => ({
+    x: 20 + Math.random()*100,
+    y: 10 + Math.random()*490,
+  }));
+  charts.scatter = new Chart(document.getElementById('scatterChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Machines',
+        data: scatterPoints,
+        backgroundColor: 'rgba(37,99,235,.45)',
+        pointRadius: 5, pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Temp: ${ctx.raw.x.toFixed(1)}°C · Power: ${ctx.raw.y.toFixed(0)}kW` } } },
+      scales: {
+        x: { title: { display: true, text: 'Temperature (°C)', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,.04)' } },
+        y: { title: { display: true, text: 'Power Consumption (kW)', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,.04)' } }
+      }
+    }
+  });
+
+  // Viz: Line Chart - RUL by Year
+  const years = [2001,2003,2005,2007,2009,2011,2013,2015,2017,2019,2021,2023,2025,2027,2030,2032];
+  const rulAvgs = [180,210,195,240,280,320,310,350,380,420,460,490,520,540,580,610];
+  charts.line = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [{
+        label: 'Avg RUL (days)',
+        data: rulAvgs,
+        borderColor: BLUE, backgroundColor: 'rgba(37,99,235,.08)',
+        borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: BLUE,
+        fill: true, tension: 0.4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `RUL: ${ctx.raw} days` } } },
+      scales: {
+        y: { title: { display: true, text: 'Avg Remaining Useful Life (days)' }, grid: { color: 'rgba(0,0,0,.04)' } },
+        x: { title: { display: true, text: 'Installation Year' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Heatmap (SVG-based)
+  renderHeatmap();
+
+  // Comparison Charts
+  charts.compScatter = new Chart(document.getElementById('compScatterChart'), {
+    type: 'bubble',
+    data: {
+      datasets: MODELS.filter(m=>m.type==='Classification').map(m => ({
+        label: m.name,
+        data: [{ x: m.accuracy*100, y: m.f1, r: 8 }],
+        backgroundColor: m.type==='Classification' ? 'rgba(37,99,235,.7)' : 'rgba(16,185,129,.7)',
+      }))
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } },
+      scales: {
+        x: { title: { display: true, text: 'Accuracy (%)' }, min: 85, max: 100, grid: { color: 'rgba(0,0,0,.04)' } },
+        y: { title: { display: true, text: 'F1 Score' }, min: 0.85, max: 1, grid: { color: 'rgba(0,0,0,.04)' } }
+      }
+    }
+  });
+
+  charts.compTime = new Chart(document.getElementById('compTimeChart'), {
+    type: 'bar',
+    data: {
+      labels: MODELS.map(m => m.name.split(' ')[0]+(m.type==='Classification'?'-C':'-R')),
+      datasets: [{
+        label: 'Train Time (s)',
+        data: MODELS.map(m => m.trainTime),
+        backgroundColor: MODELS.map(m => m.type==='Classification' ? 'rgba(37,99,235,.7)' : 'rgba(16,185,129,.7)'),
+        borderRadius: 5, borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true, plugins: { legend: { display: false } },
+      scales: { y: { title: { display: true, text: 'Seconds' }, grid: { color: 'rgba(0,0,0,.04)' } }, x: { grid: { display: false }, ticks: { maxRotation: 45 } } }
+    }
+  });
+
+  // Analytics Charts
+  initAnalyticsCharts();
+  updateAnalytics();
+}
+
+function initAnalyticsCharts() {
+  // Loss curve
+  const epochs = Array.from({length:20},(_,i)=>i+1);
+  const trainLoss = epochs.map(e => 0.9 * Math.exp(-e*0.15) + 0.05 + Math.random()*0.02);
+  const valLoss = epochs.map(e => 0.85 * Math.exp(-e*0.13) + 0.08 + Math.random()*0.03);
+  charts.loss = new Chart(document.getElementById('lossChart'), {
+    type: 'line',
+    data: {
+      labels: epochs,
+      datasets: [
+        { label: 'Train Acc', data: epochs.map(e => (1 - trainLoss[e-1]).toFixed(3)), borderColor: BLUE, backgroundColor: 'rgba(37,99,235,.07)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 },
+        { label: 'Val Acc', data: epochs.map(e => (1 - valLoss[e-1]).toFixed(3)), borderColor: GREEN, backgroundColor: 'rgba(16,185,129,.07)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3, borderDash: [4,3] },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } },
+      scales: {
+        y: { min: 0.7, max: 1.05, grid: { color: 'rgba(0,0,0,.04)' }, ticks: { callback: v => (v*100).toFixed(0)+'%' } },
+        x: { title: { display: true, text: 'Epoch' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Radar
+  charts.radar = new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: {
+      labels: ['Accuracy','Precision','Recall','F1 Score','Speed','Robustness'],
+      datasets: [
+        { label: 'Random Forest', data: [96,95,96,96,60,92], borderColor: GREEN, backgroundColor: 'rgba(16,185,129,.15)', pointBackgroundColor: GREEN },
+        { label: 'SVM Classifier', data: [93,93,93,93,30,88], borderColor: BLUE, backgroundColor: 'rgba(37,99,235,.1)', pointBackgroundColor: BLUE },
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: { r: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,.06)' }, pointLabels: { font: { size: 11 } } } },
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } }
+    }
+  });
+
+  // ROC curve
+  const fpr = [0,0.02,0.05,0.08,0.12,0.17,0.23,0.30,0.40,0.52,0.65,0.78,0.88,0.95,1.0];
+  const tpr_rf = [0,0.45,0.70,0.82,0.89,0.93,0.96,0.97,0.98,0.985,0.99,0.995,0.998,0.999,1.0];
+  const tpr_svm = [0,0.38,0.62,0.75,0.84,0.89,0.92,0.94,0.96,0.97,0.98,0.99,0.995,0.998,1.0];
+  charts.roc = new Chart(document.getElementById('rocChart'), {
+    type: 'line',
+    data: {
+      labels: fpr,
+      datasets: [
+        { label: 'Random Forest (AUC=0.987)', data: tpr_rf, borderColor: GREEN, backgroundColor: 'rgba(16,185,129,.08)', borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 0 },
+        { label: 'SVM Classifier (AUC=0.974)', data: tpr_svm, borderColor: BLUE, backgroundColor: 'rgba(37,99,235,.04)', borderWidth: 2, fill: false, tension: 0.4, pointRadius: 0 },
+        { label: 'Random Classifier', data: fpr, borderColor: '#9CA3AF', borderWidth: 1, borderDash: [5,5], fill: false, pointRadius: 0 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } },
+      scales: {
+        x: { title: { display: true, text: 'False Positive Rate' }, grid: { color: 'rgba(0,0,0,.04)' }, ticks: { callback: v => v } },
+        y: { title: { display: true, text: 'True Positive Rate' }, min: 0, max: 1, grid: { color: 'rgba(0,0,0,.04)' } }
+      }
+    }
+  });
+}
+
+function updateAnalyticsCharts(mid) {
+  // regenerate loss curve for selected model
+  const m = MODELS.find(x => x.id === mid) || MODELS[0];
+  const epochs = Array.from({length:20},(_,i)=>i+1);
+  const targetAcc = m.type==='Classification' ? m.accuracy : m.r2;
+  const trainAcc = epochs.map(e => { const p = Math.min(1, targetAcc - 0.15*Math.exp(-e*0.3) + (Math.random()-.5)*0.01); return +p.toFixed(4); });
+  const valAcc = epochs.map(e => { const p = Math.min(1, targetAcc - 0.18*Math.exp(-e*0.28) + (Math.random()-.5)*0.015); return +p.toFixed(4); });
+  if (charts.loss) {
+    charts.loss.data.datasets[0].data = trainAcc;
+    charts.loss.data.datasets[1].data = valAcc;
+    charts.loss.update();
+  }
+}
+
+function renderHeatmap() {
+  const features = ['Temp_C','Vib_mms','Sound_dB','Oil_Lvl','Coolant','Power_kW','Maint_Days','RUL_Days'];
+  const rawCorr = [
+    [1.00, 0.62,-0.18,-0.41, 0.09, 0.73, 0.55,-0.68],
+    [0.62, 1.00,-0.22,-0.31, 0.14, 0.58, 0.48,-0.59],
+    [-0.18,-0.22, 1.00, 0.07,-0.12,-0.09, 0.03, 0.15],
+    [-0.41,-0.31, 0.07, 1.00, 0.18,-0.37,-0.29, 0.43],
+    [0.09, 0.14,-0.12, 0.18, 1.00, 0.06,-0.04, 0.08],
+    [0.73, 0.58,-0.09,-0.37, 0.06, 1.00, 0.42,-0.62],
+    [0.55, 0.48, 0.03,-0.29,-0.04, 0.42, 1.00,-0.51],
+    [-0.68,-0.59, 0.15, 0.43, 0.08,-0.62,-0.51, 1.00],
+  ];
+  const n = features.length;
+  const cellSize = 54;
+  const labelSize = 72;
+  const pad = 8;
+  const W = labelSize + n*cellSize + pad*2;
+  const H = labelSize + n*cellSize + pad*2;
+
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:'Inter',sans-serif">`;
+
+  // column labels
+  features.forEach((f,j) => {
+    svg += `<text x="${labelSize + j*cellSize + cellSize/2}" y="${labelSize - 6}" text-anchor="middle" transform="rotate(-45,${labelSize + j*cellSize + cellSize/2},${labelSize - 6})" font-size="11" fill="#374151" font-weight="500">${f}</text>`;
+  });
+  // row labels
+  features.forEach((f,i) => {
+    svg += `<text x="${labelSize - 8}" y="${labelSize + i*cellSize + cellSize/2 + 4}" text-anchor="end" font-size="11" fill="#374151" font-weight="500">${f}</text>`;
+  });
+
+  function corrColor(v) {
+    if (v >= 0) {
+      const t = v;
+      const r = Math.round(37 + t*(239-37));
+      const g = Math.round(99 + t*(68-99));
+      const b = Math.round(235 + t*(68-235));
+      return `rgb(${r},${g},${b})`;
+    } else {
+      const t = -v;
+      const r = Math.round(37 + t*(16-37));
+      const g = Math.round(99 + t*(185-99));
+      const b = Math.round(235 + t*(129-235));
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+
+  rawCorr.forEach((row,i) => {
+    row.forEach((v,j) => {
+      const x = labelSize + j*cellSize;
+      const y = labelSize + i*cellSize;
+      const clr = corrColor(v);
+      const textColor = Math.abs(v) > 0.4 ? '#fff' : '#374151';
+      svg += `<rect x="${x}" y="${y}" width="${cellSize-2}" height="${cellSize-2}" rx="4" fill="${clr}" opacity="0.9"/>`;
+      svg += `<text x="${x+cellSize/2-1}" y="${y+cellSize/2+4}" text-anchor="middle" font-size="10" fill="${textColor}" font-weight="600">${v.toFixed(2)}</text>`;
+    });
+  });
+  svg += '</svg>';
+  document.getElementById('heatmapContainer').innerHTML = svg;
+}
+
+/* ══════════════════════════════════════════════
+   EXPORT PDF (basic print)
+══════════════════════════════════════════════ */
+document.getElementById('exportPdfBtn').addEventListener('click', () => {
+  window.print();
+  showToast('Opening print dialog for PDF export', 'info');
+});
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+buildTableHead();
+renderTable();
+renderModelCards();
+buildModelSelect();
+renderCompTable(MODELS);
+
+// Init charts immediately for dashboard
+setTimeout(() => { initAllCharts(); chartsInitialized = true; }, 100);
+</script>
+</body>
+</html>
